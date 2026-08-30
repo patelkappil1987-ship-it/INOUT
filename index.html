@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Inward Outward"><link rel="manifest" href="manifest.json"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#1f6feb">
+<title>Offline Inward Data Entry</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
+header{background:#1f6feb;color:#fff;padding:14px 16px;position:sticky;top:0;z-index:10}
+h1{font-size:20px;margin:0 0 4px}header small{opacity:.9}
+.tabs{display:flex;gap:8px;padding:10px;background:#fff;position:sticky;top:69px;z-index:9;overflow:auto}
+.tabs button{border:0;border-radius:8px;padding:10px 14px;background:#e9eef5;white-space:nowrap;font-weight:600}
+.tabs button.active{background:#1f6feb;color:white}
+main{max-width:1100px;margin:auto;padding:12px}
+.card{background:#fff;border-radius:12px;padding:15px;margin-bottom:12px;box-shadow:0 2px 8px #00000012}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{font-size:13px;font-weight:700;display:block;margin-bottom:5px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;background:#fff}
+input[type=file]{padding:9px;font-size:14px}
+button{cursor:pointer}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn{border:0;border-radius:8px;padding:12px 16px;font-weight:700}
+.primary{background:#1f6feb;color:#fff}.secondary{background:#e9eef5}.danger{background:#dc3545;color:#fff}.success{background:#198754;color:#fff}
+.preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px}
+.preview img{width:90px;height:70px;object-fit:cover;border-radius:7px;border:1px solid #ddd}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:1050px;font-size:13px}
+th,td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;vertical-align:top}
+th{background:#f1f5f9;position:sticky;top:0}
+.thumb{width:55px;height:45px;object-fit:cover;border-radius:5px}
+.stats{display:flex;gap:10px;flex-wrap:wrap}.stat{background:#eef5ff;border-radius:10px;padding:12px 18px}.stat b{font-size:20px;display:block}
+.hidden{display:none}.muted{color:#64748b;font-size:13px}.master-row{display:flex;gap:8px;margin-bottom:8px}.master-row input{flex:1}
+@media(max-width:650px){.grid{grid-template-columns:1fr}main{padding:8px}.card{padding:12px}.tabs{top:67px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Offline Inward Data Entry</h1>
+  <small>Works offline • Data & photos are saved on this device</small>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-tab="entry">➕ New Entry</button>
+  <button class="tab" data-tab="records">📋 Records</button>
+  <button class="tab" data-tab="master">⚙️ Master</button>
+  <button class="tab" data-tab="backup">💾 Backup</button>
+</div>
+
+<main>
+<section id="entry" class="page">
+<div class="card">
+<form id="entryForm">
+<input type="hidden" id="editId">
+<div class="grid">
+<div><label>SR NO</label><input id="srno" readonly></div>
+<div><label>IN / OUT *</label><select id="transType" required><option>INWARD</option><option>OUTWARD</option></select></div>
+<div><label>DATE *</label><input id="indate" type="date" required></div>
+<div><label>TIME *</label><input id="intime" type="time" required></div>
+<div><label>PARTY NAME *</label><input id="party" list="partyList" required placeholder="Select / type party name"><datalist id="partyList"></datalist></div>
+<div><label>RECV PERSON</label><input id="recv" placeholder="Received by"></div>
+<div><label>ITEM NAME *</label><input id="item" required placeholder="Item name"></div>
+<div><label>QTY *</label><input id="qty" type="number" min="0" step="any" required></div>
+<div><label>CATEGORY</label><input id="category" list="categoryList" placeholder="Select / type category"><datalist id="categoryList"></datalist></div>
+<div><label>MACHINE NAME</label><input id="machine" list="machineList" placeholder="Select / type machine"><datalist id="machineList"></datalist></div>
+<div><label>INVOICE PHOTO</label><input id="invoicePhoto" type="file" accept="image/*" capture="environment"><div id="invoicePreview" class="preview"></div></div>
+<div><label>PRODUCT PHOTO</label><input id="productPhoto" type="file" accept="image/*" capture="environment"><div id="productPreview" class="preview"></div></div>
+</div>
+<div class="actions">
+<button class="btn primary" type="submit">💾 Save Entry</button>
+<button class="btn secondary" type="button" id="resetBtn">↺ Clear</button>
+</div>
+<p id="formMsg" class="muted"></p>
+</form>
+</div>
+</section>
+
+<section id="records" class="page hidden">
+<div class="card">
+<div class="stats"><div class="stat">Records<b id="recordCount">0</b></div><div class="stat">Total Qty<b id="totalQty">0</b></div></div>
+<div class="actions">
+<input id="search" placeholder="🔍 Search party, item, person, category, machine..." style="flex:1;min-width:230px">
+<button class="btn success" id="exportCsv">⬇️ Export CSV</button>
+</div>
+</div>
+<div class="card table-wrap"><table><thead><tr>
+<th>SR NO</th><th>IN / OUT</th><th>DATE</th><th>TIME</th><th>PARTY NAME</th><th>RECV PERSON</th><th>ITEM NAME</th><th>QTY</th><th>CATEGORY</th><th>MACHINE NAME</th><th>INVOICE</th><th>PRODUCT</th><th>ACTION</th>
+</tr></thead><tbody id="recordBody"></tbody></table></div>
+</section>
+
+<section id="master" class="page hidden">
+<div class="card">
+<h3>Master Lists</h3>
+<p class="muted">Add names here. They will appear as suggestions in the entry form.</p>
+<div><label>Party Name</label><div class="master-row"><input id="newParty" placeholder="New party"><button class="btn primary" onclick="addMaster('parties','newParty')">Add</button></div><div id="partyMaster"></div></div>
+<hr>
+<div><label>Category</label><div class="master-row"><input id="newCategory" placeholder="New category"><button class="btn primary" onclick="addMaster('categories','newCategory')">Add</button></div><div id="categoryMaster"></div></div>
+<hr>
+<div><label>Machine Name</label><div class="master-row"><input id="newMachine" placeholder="New machine"><button class="btn primary" onclick="addMaster('machines','newMachine')">Add</button></div><div id="machineMaster"></div></div>
+</div>
+</section>
+
+<section id="backup" class="page hidden">
+<div class="card">
+<h3>Backup & Restore</h3>
+<p class="muted">Use backup regularly. The backup contains records, photos and master lists.</p>
+<div class="actions">
+<button class="btn success" id="backupBtn">⬇️ Backup All Data</button>
+<label class="btn secondary" style="display:inline-block">⬆️ Restore Backup<input id="restoreFile" type="file" accept=".json" style="display:none"></label>
+<button class="btn danger" id="clearAll">🗑️ Delete ALL Data</button>
+</div>
+<p id="backupMsg" class="muted"></p>
+</div>
+<div class="card">
+<h3>Important</h3>
+<ul><li>Data is stored locally in this browser/device.</li><li>Clearing browser/site data can remove records.</li><li>Use <b>Backup All Data</b> before changing devices.</li><li>Photos are stored inside the backup JSON.</li></ul>
+</div>
+</section>
+</main>
+
+<script>
+const DB_NAME='OfflineInwardDB', STORE='data';
+let db, records=[], masters={parties:[],categories:[],machines:[]};
+let invoiceData='', productData='';
+
+function openDB(){
+ return new Promise((resolve,reject)=>{
+  const r=indexedDB.open(DB_NAME,1);
+  r.onupgradeneeded=e=>e.target.result.createObjectStore(STORE);
+  r.onsuccess=e=>{db=e.target.result;resolve()};
+  r.onerror=()=>reject(r.error);
+ });
+}
+function getStore(){return db.transaction(STORE,'readwrite').objectStore(STORE)}
+function saveAll(){
+ return new Promise((resolve,reject)=>{
+  const s=getStore(); s.put(records,'records');s.put(masters,'masters');
+  const t=s.transaction;t.oncomplete=resolve;t.onerror=()=>reject(t.error);
+ });
+}
+function loadAll(){
+ return new Promise(resolve=>{
+  const s=db.transaction(STORE).objectStore(STORE);
+  const a=s.get('records'), b=s.get('masters');
+  a.onsuccess=()=>{records=a.result||[];b.onsuccess=()=>{masters=b.result||{parties:[],categories:[],machines:[]};resolve()}};
+ });
+}
+function today(){return new Date().toISOString().slice(0,10)}
+function nextSr(){return records.length?Math.max(...records.map(x=>Number(x.srno)||0))+1:1}
+function $(id){return document.getElementById(id)}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function refreshLists(){
+ ['parties','categories','machines'].forEach(k=>{
+  const id=k==='parties'?'partyList':k==='categories'?'categoryList':'machineList';
+  $(id).innerHTML=masters[k].map(x=>`<option value="${esc(x)}">`).join('');
+  const box=k==='parties'?'partyMaster':k==='categories'?'categoryMaster':'machineMaster';
+  $(box).innerHTML=masters[k].map((x,i)=>`<div class="master-row"><input value="${esc(x)}" readonly><button class="btn danger" onclick="removeMaster('${k}',${i})">Delete</button></div>`).join('');
+ });
+}
+function addMaster(k,inputId){
+ const v=$(inputId).value.trim(); if(!v)return;
+ if(!masters[k].includes(v))masters[k].push(v);
+ $(inputId).value='';saveAll().then(refreshLists);
+}
+function removeMaster(k,i){if(confirm('Delete this master item?')){masters[k].splice(i,1);saveAll().then(refreshLists)}}
+function currentTime(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function setNewForm(){
+ $('entryForm').reset();$('editId').value='';$('srno').value=nextSr();$('indate').value=today();$('intime').value=currentTime();$('transType').value='INWARD';
+ invoiceData='';productData='';$('invoicePreview').innerHTML='';$('productPreview').innerHTML='';$('formMsg').textContent='';
+}
+function readImage(file){
+ return new Promise((resolve,reject)=>{
+  if(!file){resolve('');return}
+  const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);
+ });
+}
+function preview(inputId,previewId,data){
+ $(previewId).innerHTML=data?`<img src="${data}" alt="photo">`:'';
+}
+$('invoicePhoto').onchange=async e=>{invoiceData=await readImage(e.target.files[0]);preview('invoicePhoto','invoicePreview',invoiceData)}
+$('productPhoto').onchange=async e=>{productData=await readImage(e.target.files[0]);preview('productPhoto','productPreview',productData)}
+
+$('entryForm').onsubmit=async e=>{
+ e.preventDefault();
+ const editId=$('editId').value;
+ const old=records.find(x=>String(x.id)===String(editId));
+ const rec={id:editId?Number(editId):Date.now(),srno:Number($('srno').value),transType:$('transType').value,indate:$('indate').value,intime:$('intime').value,party:$('party').value.trim(),recv:$('recv').value.trim(),item:$('item').value.trim(),qty:Number($('qty').value),category:$('category').value.trim(),machine:$('machine').value.trim(),invoice:invoiceData||old?.invoice||'',product:productData||old?.product||''};
+ if(editId){records[records.findIndex(x=>x.id===Number(editId))]=rec}else records.push(rec);
+ await saveAll(); renderRecords(); setNewForm(); $('formMsg').textContent='Saved successfully.';
+ showTab('records');
+};
+
+$('resetBtn').onclick=setNewForm;
+function renderRecords(){
+ const q=$('search').value.toLowerCase();
+ const arr=records.filter(r=>Object.values(r).some(v=>typeof v==='string'&&v.toLowerCase().includes(q)));
+ $('recordCount').textContent=records.length;
+ $('totalQty').textContent=records.reduce((a,r)=>a+(Number(r.qty)||0),0);
+ $('recordBody').innerHTML=arr.map(r=>`<tr>
+<td>${r.srno}</td><td>${esc(r.transType||'INWARD')}</td><td>${esc(r.indate)}</td><td>${esc(r.intime||'')}</td><td>${esc(r.party)}</td><td>${esc(r.recv)}</td><td>${esc(r.item)}</td><td>${r.qty}</td><td>${esc(r.category)}</td><td>${esc(r.machine)}</td>
+<td>${r.invoice?`<a href="${r.invoice}" download="invoice_${r.srno}.jpg"><img class="thumb" src="${r.invoice}"></a>`:'—'}</td>
+<td>${r.product?`<a href="${r.product}" download="product_${r.srno}.jpg"><img class="thumb" src="${r.product}"></a>`:'—'}</td>
+<td><button class="btn secondary" onclick="editRecord(${r.id})">Edit</button> <button class="btn danger" onclick="deleteRecord(${r.id})">Delete</button></td>
+</tr>`).join('')||'<tr><td colspan="13">No records found.</td></tr>';
+}
+function editRecord(id){
+ const r=records.find(x=>x.id===id);if(!r)return;
+ showTab('entry');$('editId').value=r.id;$('srno').value=r.srno;$('transType').value=r.transType||'INWARD';$('indate').value=r.indate;$('intime').value=r.intime||'';$('party').value=r.party;$('recv').value=r.recv;$('item').value=r.item;$('qty').value=r.qty;$('category').value=r.category;$('machine').value=r.machine;invoiceData=r.invoice||'';productData=r.product||'';preview('invoicePhoto','invoicePreview',invoiceData);preview('productPhoto','productPreview',productData);window.scrollTo({top:0,behavior:'smooth'});
+}
+async function deleteRecord(id){if(confirm('Delete this entry?')){records=records.filter(x=>x.id!==id);await saveAll();renderRecords()}}
+$('search').oninput=renderRecords;
+
+function csvCell(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
+$('exportCsv').onclick=()=>{
+ const headers=['SR NO','IN / OUT','DATE','TIME','PARTY NAME','RECV PERSON','ITEM NAME','QTY','CATEGORY','MACHINE NAME','INVOICE PHOTO','PRODUCT PHOTO'];
+ const rows=records.map(r=>[r.srno,r.transType||'INWARD',r.indate,r.intime||'',r.party,r.recv,r.item,r.qty,r.category,r.machine,r.invoice?'Photo saved':'',r.product?'Photo saved':'']);
+ const csv='\uFEFF'+[headers,...rows].map(row=>row.map(csvCell).join(',')).join('\r\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='Inward_Data.csv';a.click();
+};
+
+$('backupBtn').onclick=()=>{
+ const data={version:1,exportedAt:new Date().toISOString(),records,masters};
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));a.download='Inward_Backup_'+today()+'.json';a.click();$('backupMsg').textContent='Backup created.';
+};
+$('restoreFile').onchange=async e=>{
+ const f=e.target.files[0];if(!f)return;
+ try{const data=JSON.parse(await f.text());if(!Array.isArray(data.records)||!data.masters)throw Error();
+ if(confirm('Restore backup? Current data will be replaced.')){records=data.records;masters=data.masters;await saveAll();refreshLists();renderRecords();setNewForm();$('backupMsg').textContent='Backup restored successfully.'}
+ }catch(err){alert('Invalid backup file.')}
+ e.target.value='';
+};
+$('clearAll').onclick=async()=>{
+ if(confirm('Delete ALL records, photos and master lists? This cannot be undone unless you have a backup.')){records=[];masters={parties:[],categories:[],machines:[]};await saveAll();refreshLists();renderRecords();setNewForm();}
+};
+
+function showTab(id){
+ document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==id));
+ document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));
+ if(id==='records')renderRecords();
+}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+
+(async()=>{await openDB();await loadAll();refreshLists();setNewForm();renderRecords()})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script></body>
+</html>
